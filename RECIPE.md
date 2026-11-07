@@ -56,7 +56,7 @@ The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16`
   4. Upscale with nearest-neighbour.
   5. Build the animation frames by script on the 48px grid. LED and implant masks are found by colour in the source image. The blink and alert patches are the pixels that changed in the busiest row band of the aligned edit. The beams, rain, grid and glitches are drawn per frame.
   6. Save the strips as lossless WebP.
-- **Sounds**: ElevenLabs TTS lines, one per voice for six voices, layered as a chorus. They were run through ffmpeg flanger, echo, bitcrush and band-pass filters, then mixed 380 ms after an ElevenLabs sound-effect bed.
+- **Sounds**: ElevenLabs TTS lines, one per voice for six voices, layered as a chorus. They were run through ffmpeg flanger, echo, bitcrush and band-pass filters. For `done.mp3`, the chorus is mixed 380 ms after an ElevenLabs sound-effect bed. For `blocked_voiced.mp3`, a 0.75 s klaxon plays about 16 dB below the voices, then the chorus starts at 650 ms on its own. Mixed under the klaxon (the older `blocked.mp3`), the words were lost.
 
 ## Watch out
 

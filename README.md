@@ -39,17 +39,17 @@ The script needs `node`. It records the numbers without printing anything, so yo
 
 ### Optional: sounds
 
-A hive chorus of six voices runs through a metallic radio filter over synth effects. "Task complete." plays over a cold chime, and "Your input is required." plays over a deep klaxon. To use them, add this to `~/.config/herdr-app/settings.json`. This setting applies to every layout:
+A hive chorus of six voices runs through a metallic radio filter. "Task complete." plays over a cold chime. For "an agent needs you", a short, quiet klaxon plays first, then the chorus says "Your input is required." on its own, so the words come through clearly. To use them, add this to `~/.config/herdr-app/settings.json`. This setting applies to every layout:
 
 ```json
 "sounds": {
   "enabled": true,
   "done": "mods/collective-chrome/sounds/done.mp3",
-  "blocked": "mods/collective-chrome/sounds/blocked.mp3"
+  "blocked": "mods/collective-chrome/sounds/blocked_voiced.mp3"
 }
 ```
 
-`done_fx_only.mp3` and `blocked_fx_only.mp3` are the same effects without the voices. Clicking a drone card always plays `blip.mp3`.
+`blocked.mp3` is the older take, with the voices mixed under the klaxon. `done_fx_only.mp3` and `blocked_fx_only.mp3` are the effects without the voices. Clicking a drone card always plays `blip.mp3`.
 
 ## Customise
 
