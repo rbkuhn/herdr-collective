@@ -1,0 +1,21 @@
+Collective, a Herdr layout
+Copyright 2026 rbkuhn
+
+This product includes software adapted from:
+
+- Herdr (https://herdr.dev): the shipped spaces, tabs, workspace-chrome and
+  pane mods. Licensed under the Apache License, Version 2.0.
+- herdr-traveler (https://github.com/franky5440-afk/herdr-traveler): the
+  traveler-agents, traveler-chrome, traveler-spaces and traveler-tabs mods
+  and the traveler layout, by way of herdr-inferno. Licensed under the Apache
+  License, Version 2.0.
+
+Changes: renamed to collective-*. Replaced all art, fonts, theme and sounds.
+Restyled every panel. Agents are animated pixel-art drone faces stepped from
+sprite strips, with LED power cells for context and quota. Added a pane
+header (collective-pane, from Herdr's pane mod) and a Claude Code statusline
+recorder (scripts/).
+
+Bundled fonts (mods/collective-chrome/fonts) are licensed under the SIL Open
+Font License 1.1; see OFL-Silkscreen.txt, OFL-PixelifySans.txt and
+OFL-VT323.txt.
