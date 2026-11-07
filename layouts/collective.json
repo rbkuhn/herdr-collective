@@ -206,7 +206,7 @@
     16
   ],
   "theme": "collective",
-  "terminal_opacity": 0.72,
+  "terminal_opacity": 0.5,
   "ui_font": "Pixelify Sans",
   "preview": "layouts/collective.png"
 }

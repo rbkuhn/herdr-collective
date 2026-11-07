@@ -1,6 +1,6 @@
 # Collective
 
-A cybernetic hive-mind window for Herdr, in pixel art. The left sidebar is a dark wall of regeneration alcoves. It lists spaces as numbered "Sectors", each with a pixel-art location (cube ship, sphere ship, alcoves, half-assimilated planet, data spire, energy vortex). Below them, "The Collective" shows every agent as a drone card: an animated 48×48 pixel-art face, a designation ("THREE OF FOUR"), a role, and two 10-segment LED power cells, CORTEX and LINK. The tab bar is a pixel conduit strip with a drone face on each tab. Terminals sit over a dark circuit-board hull at 72% opacity, in panes with a hive-green HUD header.
+A cybernetic hive-mind window for Herdr, in pixel art. The left sidebar is a dark wall of regeneration alcoves. It lists spaces as numbered "Sectors", each with a pixel-art location (cube ship, sphere ship, alcoves, half-assimilated planet, data spire, energy vortex). Below them, "The Collective" shows every agent as a drone card: an animated 48×48 pixel-art face, a designation ("THREE OF FOUR"), a role, and two 10-segment LED power cells, CORTEX and LINK. The tab bar is a pixel conduit strip with a drone face on each tab. Terminals sit over a dark circuit-board hull at 50% opacity, in panes with a hive-green HUD header.
 
 ![Collective](preview.png)
 
@@ -14,7 +14,7 @@ Left to right, top to bottom:
   - **The Collective** (agents): a header with "THE COLLECTIVE" in Silkscreen, a blinking green block cursor, a rule and "N DRONES". Then one card per agent.
   - **Footer**: 69px, `#020503e0` with a `#1f5c2c` top line. Settings and Add machine.
 - **Tab bar**: 58px over `mods/collective-chrome/art/strip.png`. Tabs are 48px, with a 44px drone face (when the tab maps to a role) and the name at 12.8px. The active tab is `#071409f0` with a 1px `#39d353` border and `#b8ffbf` text; others are `#030805d0` with `#0f2a16`. Then a + menu, and Files, Changes and Inbox buttons with pixel icons (`mods/collective-tabs/art/*.png`) and Silkscreen 8.5px labels. Window buttons sit on the right.
-- **Terminal area**: 8px padding and gap. Every pane, even a lone one, has a 28px `collective-pane` header, a 1px `#1f5c2c` border (`#39d353` when focused), radius 0, and `mods/collective-chrome/art/map.png` behind the terminal at `terminal_opacity` 0.72.
+- **Terminal area**: 8px padding and gap. Every pane, even a lone one, has a 28px `collective-pane` header, a 1px `#1f5c2c` border (`#39d353` when focused), radius 0, and `mods/collective-chrome/art/map.png` behind the terminal at `terminal_opacity` 0.5.
 - **Pane header**: `#020604` (`#04100a` focused). A framed "NODE T11" tag (the terminal id) in Silkscreen 7.5px `#2f9a48`, the program icon tinted `#39d353`, the name in 700, and the folder. On the right is the status. Split, zoom and close buttons appear on hover.
 - **Status bar**: 28px, Herdr's `workspace-status` over `mods/collective-chrome/art/footer.png`.
 - **Theme** `collective`: background `#030604`, foreground `#c4e8c0`, accent and working `#39d353`, blocked `#ff4433`, done `#5ce1e6`, idle `#3d5a45`, chrome `#040a06`, surface `#06100a`, raised `#0d1f13`, border `#1f5c2c99`. ANSI: `#030604 #e0443a #39d353 #c9c04a #4aa3d9 #9a6cd0 #3cc9b0 #c4e8c0 / #3d5a45 #ff6a5a #7dff8f #e6dc6a #7cc4ee #b894e6 #6ee6cf #ecfbe8`.
@@ -43,7 +43,7 @@ The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16`
 
 ## Built from
 
-- **Layout tree**: root `row`: `sidebar` column [`brand` block `collective-chrome`, `sidebar-lists` column [`spaces` `collective-spaces`, `agents` `collective-agents`], `sidebar-footer` `collective-chrome` with props `{footer:true}`] and `work` column [`tabs` `collective-tabs`, `work-body` row [`main` `{tab:"active"}` with a pane frame whose header is `collective-pane`, `panel` column (hidden) holding a `panel-body` stack of `files`/`changes`/`inbox`], `status` `workspace-status`]. Root: `theme: "collective"`, `ui_font: "Pixelify Sans"`, `terminal_opacity: 0.72`, `terminal_padding: [14,12]`, `titlebar: "none"`, divider 1px `#0f2a16`, `preview: "layouts/collective.png"`.
+- **Layout tree**: root `row`: `sidebar` column [`brand` block `collective-chrome`, `sidebar-lists` column [`spaces` `collective-spaces`, `agents` `collective-agents`], `sidebar-footer` `collective-chrome` with props `{footer:true}`] and `work` column [`tabs` `collective-tabs`, `work-body` row [`main` `{tab:"active"}` with a pane frame whose header is `collective-pane`, `panel` column (hidden) holding a `panel-body` stack of `files`/`changes`/`inbox`], `status` `workspace-status`]. Root: `theme: "collective"`, `ui_font: "Pixelify Sans"`, `terminal_opacity: 0.5`, `terminal_padding: [14,12]`, `titlebar: "none"`, divider 1px `#0f2a16`, `preview: "layouts/collective.png"`.
 - **collective-agents**: draws `agents()` and calls `setAgentOrder`. An 80 ms `cx.timer.every` clock calls `cx.notify()` while `window().active`, and every third tick otherwise. It skips this when there are no agents. Each render sets `left(-frame * 96)` on the strip image inside an `overflow_hidden` face box. The cells come from `data/traveler/sessions/<terminal>.json` (`{updatedAt, contextRemainingPct, fiveHourRemainingPct, sessionName, model, effort}`), read with `readTextFile` and `watchFolder`. Remote agents are read with `readTextFile(..., {on})` every 60 s. `lib.js` holds the role list, `designation()` and the animation table. `collective-tabs` has its own copy of `lib.js`.
 - **collective-chrome**: brand and footer. The cube is a 36-frame strip (`art/cube.webp`) stepped by its own 90 ms timer. The mod also holds the fonts, sounds and backgrounds.
 - **collective-pane**: a restyled clone of Herdr's `pane` mod. It reads `panes()` and runs `pane.split`, `pane.zoom` and `pane.close`.
@@ -67,6 +67,8 @@ The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16`
 - gpt-image-2 ignores transparent backgrounds and paints a fake checkerboard. Use gpt-image-1.5 with `background: "transparent"` for cut-outs.
 - `mod.clone` rewrites `mods/<name>/` paths. A later find-and-replace of the old name silently misses them; check `PORTRAITS_DIR` in `lib.js`.
 - The card cells share `data/traveler/sessions` with herdr-traveler and herdr-inferno on purpose, so any of their statuslines fills all three layouts.
+- Keep the terminal background art bright enough. Behind a near-black theme at 50% opacity, the art shows at only about a fifth of its brightness. The first map averaged 7/255 and the terminal looked solid black; it now averages about 55 with green-lit traces.
+- Herdr can keep drawing a cached layout background after the file changes. Switch layouts away and back to reload it.
 - Sounds are a global Herdr setting: they play in every layout.
 - The animation redraws the window about 12 times a second while Herdr is focused, and about 4 times a second otherwise.
 
