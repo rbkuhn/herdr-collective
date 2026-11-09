@@ -1,6 +1,6 @@
 # Collective
 
-A cybernetic hive-mind window for Herdr, in pixel art. The left sidebar is a dark wall of regeneration alcoves. It lists spaces as numbered "Sectors", each with a pixel-art location (cube ship, sphere ship, alcoves, half-assimilated planet, data spire, energy vortex). Below them, "The Collective" shows every agent as a drone card: an animated 48×48 pixel-art face, a designation ("THREE OF FOUR"), a role, and two 10-segment LED power cells, CORTEX and LINK. The tab bar is a pixel conduit strip with a drone face on each tab. Terminals sit over a dark circuit-board hull at 50% opacity, in panes with a hive-green HUD header.
+A cybernetic hive-mind window for Herdr, in pixel art. The left sidebar is a dark wall of regeneration alcoves. It lists spaces as numbered "Sectors", each with a pixel-art location (cube ship, sphere ship, alcoves, half-assimilated planet, data spire, energy vortex). Under each sector, "The Collective" hangs its agents as drone cards: an animated 48×48 pixel-art face, a designation ("THREE OF FOUR"), a role, and two 8-segment LED power cells, CORTEX and LINK. The tab bar is a pixel conduit strip with a drone face on each tab. Terminals sit over a dark circuit-board hull at 50% opacity, in panes with a hive-green HUD header.
 
 ![Collective](preview.png)
 
@@ -8,10 +8,9 @@ A cybernetic hive-mind window for Herdr, in pixel art. The left sidebar is a dar
 
 Left to right, top to bottom:
 
-- **Sidebar**: 300px wide, fixed. Background: `mods/collective-chrome/art/sidebar.png` (cover), a dark pixel-art alcove wall.
+- **Sidebar**: 240px wide, fixed. Background: `mods/collective-chrome/art/sidebar.png` (cover), a dark pixel-art alcove wall.
   - **Brand**: 46px, `#020503d0` with a `#1f5c2c` bottom line. A 30px rotating pixel cube, then "HERDR" in Silkscreen 700 14px `#39d353` over "COLLECTIVE" in Silkscreen 7px dim. Search and sidebar-toggle buttons on the right. Draggable.
-  - **Sectors** (spaces): a header with "SECTORS" in Silkscreen 700 10px `#39d353`, a 1px `#1f5c2c` rule and a + button. Rows are 76px with 72px location art (36×36 pixel art drawn ×2, nearest-neighbour). Over the name is "SECTOR 001" (3 digits, list order) in Silkscreen 7.5px, green when active, else dim. The name is 13px, 700 `#b8ffbf` when active. Git lines below it. The active row is `#071409e8` with a 1px `#39d353` border; others are `#030805c8` with `#0f2a16`, hovering to `#0b2010f0`. Spaces are grouped by machine, with worktrees nested under their repo.
-  - **The Collective** (agents): a header with "THE COLLECTIVE" in Silkscreen, a blinking green block cursor, a rule and "N DRONES". Then one card per agent.
+  - **The Collective** (`collective-tree`, the whole list area): a 31px header with "THE COLLECTIVE" in Silkscreen 700 10px `#39d353`, a blinking green block, a rule, "N DRONES" and a + (new space). Under it an 18px telemetry line: LINK, the lowest fresh 5-hour quota left (green, `#e8b13a` under 30%, `#ff4433` blinking at 15% or less), "DRY ~Xm" (time to empty at the recent pace), and on the right "LOW CORTEX N%" when any drone has 30% context or less. Then the sectors: 34px rows with 26px location art, the 3-digit number in Silkscreen, the name, the git tail and marks (`~n` uncommitted, `+n` unpushed, `!n` no remote, explained on hover), a + that opens Assimilate for that sector, and the drone count with a fold chevron. Folded, a 6px dot in the most urgent drone's state colour (blinking when blocked). Each sector's drone cards hang under it, 12px in, on a 1px `#1f5c2c` tree line. Drones whose sector isn't listed show under UNASSIGNED.
   - **Footer**: 69px, `#020503e0` with a `#1f5c2c` top line. Settings and Add machine.
 - **Tab bar**: 58px over `mods/collective-chrome/art/strip.png`. Tabs are 48px, with a 44px drone face (when the tab maps to a role) and the name at 12.8px. The active tab is `#071409f0` with a 1px `#39d353` border and `#b8ffbf` text; others are `#030805d0` with `#0f2a16`. Then a + menu, and Files, Changes and Inbox buttons with pixel icons (`mods/collective-tabs/art/*.png`) and Silkscreen 8.5px labels. Window buttons sit on the right.
 - **Terminal area**: 8px padding and gap. Every pane, even a lone one, has a 28px `collective-pane` header, a 1px `#1f5c2c` border (`#39d353` when focused), radius 0, and `mods/collective-chrome/art/map.png` behind the terminal at `terminal_opacity` 0.5.
@@ -22,11 +21,15 @@ Left to right, top to bottom:
 
 ### A drone card
 
-The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16` border (state colour at 60% when the agent is focused or blocked). A 2px L-shaped HUD bracket sits on each corner.
+About 54px tall. The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16` border (state colour at 60% when focused or blocked, `#ff4433` when context is critical). A 6px L-shaped HUD bracket sits on each corner.
 
-- **Face**: 96×96, black, 1px border in the state colour. It shows the drone's animation for the current state. A 12px `#000000c8` strip across its bottom reads the state in Silkscreen 7px: PROCESSING, AWAITING INPUT (blinking), COMPLETE or REGENERATING.
-- **Designation** in Silkscreen ("ONE OF FOUR": the card's place in the list, out of the total). Then the tab name, 700. Then "<ROLE> DRONE" in Silkscreen. Then the session name, if Claude Code's `/rename` set one. Then a framed CLAUDE tag with "model · effort".
-- **Power cells**: CORTEX and LINK, each 12px tall: a 36px Silkscreen word, ten 4×8 lamps and the percentage. Lamps are `#39d353`, `#e8b13a` under 30% and `#ff4433` under 15%. Unlit lamps are `#0d1f12` with a `#163d20` border. If the value is more than 5 minutes old, the colour dims to `#2f9a48` and a `*` follows the number. Without data, the lamps are dark and the number is "—". Codex and OpenCode agents show no cells.
+- **Face**: 44×44, black, 1px border in the state colour, showing the drone's animation for its state.
+- **Line 1**: the tab name (700, 12.5px), then the state word in Silkscreen 7px: BUSY, INPUT (blinking), DONE or IDLE.
+- **Line 2**: a framed CLAUDE tag with "model · effort".
+- **Line 3**: the CTX and LNK cells side by side.
+- **Awaiting input** (blocked): a red panel under the card. It shows the question (the last 3 screen lines before the choices) and one button per choice: a numbered prompt presses the digit, an arrow list presses up/down then Enter, and with no choices Approve presses Enter. Then Interrupt, and a reply line (Esc first on a choice list, then `hc send --force`). A result line shows for 5 s.
+- **Context critical** (15% or less): a flashing "CORTEX n% · ~Xm" bar with a COMPACT button that sends `/compact`.
+- **Hover** for 400 ms: the neural feed, a 560px panel hung right of the card from a 1px gpui `Popup` anchor. It shows the name, state, address, details (designation, role, session name, context and quota left with time to empty) and the screen's last 16 lines, read with `hc read` every second. It doesn't open while the pointer is on the answer panel.
 
 ## How it behaves
 
@@ -43,8 +46,10 @@ The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16`
 
 ## Built from
 
-- **Layout tree**: root `row`: `sidebar` column [`brand` block `collective-chrome`, `sidebar-lists` column [`spaces` `collective-spaces`, `agents` `collective-agents`], `sidebar-footer` `collective-chrome` with props `{footer:true}`] and `work` column [`tabs` `collective-tabs`, `work-body` row [`main` `{tab:"active"}` with a pane frame whose header is `collective-pane`, `panel` column (hidden) holding a `panel-body` stack of `files`/`changes`/`inbox`], `status` `workspace-status`]. Root: `theme: "collective"`, `ui_font: "Pixelify Sans"`, `terminal_opacity: 0.5`, `terminal_padding: [14,12]`, `titlebar: "none"`, divider 1px `#0f2a16`, `preview: "layouts/collective.png"`.
+- **Layout tree**: root `row`: `sidebar` column [`brand` block `collective-chrome`, `sidebar-lists` block `collective-tree`, `sidebar-footer` `collective-chrome` with props `{footer:true}`] and `work` column [`tabs` `collective-tabs`, `work-body` row [`main` `{tab:"active"}` with a pane frame whose header is `collective-pane`, `panel` column (hidden) holding a `panel-body` stack of `files`/`changes`/`inbox`], `status` `workspace-status`]. Root: `theme: "collective"`, `ui_font: "Pixelify Sans"`, `terminal_opacity: 0.5`, `terminal_padding: [14,12]`, `titlebar: "none"`, divider 1px `#0f2a16`, `preview: "layouts/collective.png"`.
 - **collective-agents**: draws `agents()` and calls `setAgentOrder`. An 80 ms `cx.timer.every` clock calls `cx.notify()` while `window().active`, and every third tick otherwise. It skips this when there are no agents. Each render sets `left(-frame * 96)` on the strip image inside an `overflow_hidden` face box. The cells come from `data/traveler/sessions/<terminal>.json` (`{updatedAt, contextRemainingPct, fiveHourRemainingPct, sessionName, model, effort}`), read with `readTextFile` and `watchFolder`. Remote agents are read with `readTextFile(..., {on})` every 60 s. `lib.js` holds the role list, `designation()` and the animation table. `collective-tabs` has its own copy of `lib.js`.
+- **collective-tree**: the sidebar list. `main.js` is collective-spaces' sector list with each row followed by its drones (`agents()` grouped by `space`), per-sector folds in `localStorage` (`sectors.folded`), and `setAgentOrder` in tree order. `agents.js` is collective-agents' card code as a `Roster` class the tree calls (`prepare(cx)` once per render, `card(...)` per drone). `ask.js` reads a blocked screen into its question and choices, and the feed's last lines. `telemetry.js` samples each drone's context and quota from the statusLine cache, works out time to empty over the last 45 minutes, and keeps it in `localStorage`. It uses `hc(["read"|"keys"|"send"|"interrupt", …])` and `notify`. Its art and `jobs.json` stay in `mods/collective-agents/` and `mods/collective-spaces/`.
+- **collective-assimilate**: the Assimilate dialog (`mod.json` overlay: dialog, `frame: "none"`, 540×480). Roles come from `mods/collective-agents/jobs.json` with their faces, sectors from `spaces()`, units from `knownAgents({on})`. Enter runs `tab.new {space, name: role, argv, task}`. Opened by `keys.json`'s `layout:collective` `ctrl-shift-a` (`mod.open:collective-assimilate`) or a sector's + (`openOverlay` with `props.space`).
 - **collective-chrome**: brand and footer. The cube is a 36-frame strip (`art/cube.webp`) stepped by its own 90 ms timer. The mod also holds the fonts, sounds and backgrounds.
 - **collective-pane**: a restyled clone of Herdr's `pane` mod. It reads `panes()` and runs `pane.split`, `pane.zoom` and `pane.close`.
 - **collective-spaces**, **collective-tabs**: restyled clones of the inferno mods, which are clones of herdr-traveler's, which are clones of Herdr's `spaces` and `tabs`. They use `spaces()`, `panes()`, `exec("git", …)`, `hc(["machine","ls"])`, `openOverlay` for the `menu` and `new-menu` mods, and `layout.select`/`layout.show`/`layout.hide`.
@@ -74,7 +79,11 @@ The background is `#030805e8`, or `#071409f0` when focused, with a 1px `#0f2a16`
 
 ## Done when
 
-- `herdr-app check` passes for all five `mods/collective-*` folders, and `herdr-app status` shows `"layout": "collective"` with no errors.
+- `herdr-app check` passes for all seven `mods/collective-*` folders, and `herdr-app status` shows `"layout": "collective"` with no errors.
 - Screenshots a fraction of a second apart show a resting drone blinking or its LEDs changing. A working Claude Code agent's drone shows a laser or scan beam in a different place in each one.
 - With the statusline installed, a Claude Code card shows CORTEX and LINK percentages that match its context and 5-hour usage. Without it, the cells show "—".
 - The brand cube visibly rotates. Sector rows show location art and "SECTOR 00N", and the active one has a green frame. Tabs show drone faces. Files, Changes and Inbox toggle the right panel.
+- A blocked Claude Code agent's card shows its question and one button per choice; pressing one answers it, and the panel goes when the agent moves on.
+- Resting the pointer on a card opens the neural feed with that terminal's last lines.
+- A cache under 15% context turns the card red with COMPACT; the telemetry line shows LINK and, after a few minutes of samples, DRY ~Xm.
+- `ctrl-shift-a` opens Assimilate; Enter starts the chosen agent in a tab named after the role, with that role's face.

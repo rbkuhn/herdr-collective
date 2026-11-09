@@ -14,11 +14,23 @@ cd herdr-collective
 H=~/.config/herdr-app
 cp layouts/collective.json layouts/collective.png "$H/layouts/"
 cp themes/collective.json "$H/themes/"
-cp -r mods/collective-agents mods/collective-chrome mods/collective-pane mods/collective-spaces mods/collective-tabs "$H/mods/"
+cp -r mods/collective-agents mods/collective-assimilate mods/collective-chrome mods/collective-pane mods/collective-spaces mods/collective-tabs mods/collective-tree "$H/mods/"
 herdr-app do layout.switch '{"name":"collective"}'
 ```
 
+Then add the key from `keys.json` to your own `~/.config/herdr-app/keys.json`: copy its `"layout:collective"` section in. It only applies while Collective is showing.
+
 Press `ctrl-shift-l` to switch back. To remove Collective, delete the files you copied.
+
+## Using it
+
+- **One tree**: each sector (space) lists its drones under it. Click a sector's count to fold it; folded, a dot shows its most urgent drone.
+- **Answer from the sidebar**: when a drone needs you, its card opens an AWAITING INPUT panel with the question, one button per choice, Interrupt and a reply line. You don't leave the terminal you're in.
+- **Neural feed**: rest the pointer on a card to see the last lines of that drone's terminal. Click the card to open it.
+- **Fuel warnings**: the line under the header shows the 5-hour quota left (LINK) and when it runs dry at the current pace. At 15% context a card turns red and offers COMPACT (sends `/compact`), and a toast warns you once.
+- **Assimilate** (`ctrl-shift-a`, or a sector's `+`): pick a role, a sector, an installed agent and a first message, and Enter starts it in a new tab named after the role, so it gets that drone's face.
+
+The sidebar runs `hc` against your own agents: `hc read` to show a blocked or hovered drone's screen, and `hc keys`, `hc send` and `hc interrupt` only when you press a button. Nothing reaches the network.
 
 ### Optional: fill the Cortex and Link cells (Claude Code)
 

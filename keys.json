@@ -1,0 +1,5 @@
+{
+  "layout:collective": {
+    "ctrl-shift-a": "mod.open:collective-assimilate"
+  }
+}

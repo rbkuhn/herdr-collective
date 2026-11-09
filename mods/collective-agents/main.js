@@ -1,21 +1,31 @@
 // The Collective: agents() as a roster of drones with animated pixel-art faces. Cortex = context
 // left, Link = 5-hour quota left, read from the statusLine cache (data/traveler/sessions, shared
-// with the traveler and inferno layouts). Reads cache files only: no commands, no network.
+// with the traveler and inferno layouts). No network. Hovering a card shows its screen (`hc read`,
+// every 1s while open). A blocked agent's card reads its screen
+// (`hc read`, every 1.5s while blocked) and, only when you press its buttons, answers it
+// (`hc keys`, `hc send --force`, `hc interrupt`).
 import { View, div, image, svg } from "gpui-kit";
-import { h_flex, v_flex } from "gpui-base";
-import { agents, appHome, playSound, readTextFile, run, setAgentOrder, spaces, theme, watchFolder, window } from "herdr";
+import { h_flex, v_flex, Popup } from "gpui-base";
+import { agents, appHome, focused, hc, playSound, readTextFile, run, setAgentOrder, spaces, theme, watchFolder, window } from "herdr";
+import { extract, tail } from "./ask.js";
 import { CLASS_TITLE, animPath, appLabel, assignJobs, cachePath, cells, designation, gauge, jobIn, modelText, parseCache, remoteCachePath, tabNames } from "./lib.js";
 
 const HOME = appHome();
 const SESSIONS_DIR = `${HOME}/data/traveler/sessions`;
 const JOBS_FILE = `${HOME}/mods/collective-agents/jobs.json`;
 const BLIP = "mods/collective-chrome/sounds/blip.mp3";
-const FACE = 96;
-const SEGMENTS = 10;
+// Compact cards: a small face and three short lines.
+const FACE = 44;
+const SEGMENTS = 8;
+// The hover feed: how long the pointer rests before it opens, how many screen lines, how wide.
+const PEEK_DELAY = 400;
+const FEED_LINES = 16;
+const FEED_WIDTH = 560;
 const HUD = "Silkscreen";
 const GREEN = "#39d353";
 const DIM = "#1f5c2c";
-const STATUS = { working: "PROCESSING", blocked: "AWAITING INPUT", done: "COMPLETE", idle: "REGENERATING" };
+// Short words so the names keep the room in a narrow sidebar.
+const STATUS = { working: "BUSY", blocked: "INPUT", done: "DONE", idle: "IDLE" };
 
 // The drone's face: one strip of frames per role and state (rest = blinking, implants flickering;
 // working = ocular scan beam and data overlay; blocked = red alert glitch; done = assimilation
@@ -28,18 +38,12 @@ function face(a, job, t, now) {
   const shell = div().relative().size(FACE).flex_none().overflow_hidden().bg("#000000").border(1).border_color(frame);
   if (anim) {
     const i = Math.floor(now / anim.ms) % anim.frames;
-    const color = a.status === "blocked" ? t.blocked : a.status === "working" ? "#8cff9e" : a.status === "done" ? t.done : t.dim;
-    return shell
-      .child(image(anim.path).absolute().top(0).left(-i * FACE).w(FACE * anim.frames).h(FACE))
-      // HUD status strip across the bottom of the portrait.
-      .child(h_flex().absolute().left(0).right(0).bottom(0).h(12).justify_center().items_center().bg("#000000c8").border_t(1).border_color(frame)
-        .child(div().font_family(HUD).text_size(7).text_color(color)
-          .when(a.status === "blocked", (el) => el.loop("opacity", { from: 0.2, to: 1, period: 700 }))
-          .child(STATUS[a.status] ?? String(a.status ?? "").toUpperCase())));
+    // The status word moved beside the name; the face is too small for a HUD strip.
+    return shell.child(image(anim.path).absolute().top(0).left(-i * FACE).w(FACE * anim.frames).h(FACE));
   }
   const p = a.program;
   if (!p?.icon) return shell;
-  return shell.child((p.tint ? svg(p.icon).text_color(GREEN) : image(p.icon)).absolute().left(30).top(30).size(36));
+  return shell.child((p.tint ? svg(p.icon).text_color(GREEN) : image(p.icon)).absolute().left(8).top(8).size(FACE - 16));
 }
 
 // An LED power cell: a word, SEGMENTS square lamps, the number. Green, amber under 30%, red under 15%.
@@ -49,17 +53,17 @@ function cell(word, g, t) {
   const lamps = [];
   for (let i = 0; i < SEGMENTS; i++) {
     const on = lit !== null && i < lit;
-    lamps.push(div().w(4).h(8).flex_none().bg(on ? color : "#0d1f12").border(1).border_color(on ? color : "#163d20"));
+    lamps.push(div().w(3).h(7).flex_none().bg(on ? color : "#0d1f12").border(1).border_color(on ? color : "#163d20"));
   }
   return h_flex()
-    .w_full()
+    .flex_1()
     .min_w(0)
-    .h(12)
-    .gap(5)
+    .h(11)
+    .gap(4)
     .items_center()
-    .child(div().w(36).flex_none().font_family(HUD).text_size(7.5).text_color(t.dim).child(word))
+    .child(div().flex_none().font_family(HUD).text_size(7).text_color(t.dim).child(word))
     .child(h_flex().gap(1).flex_none().children(lamps))
-    .child(div().flex_none().text_size(11).text_color(g.pct === null ? t.dim : color).child(g.stale ? `${g.text}*` : g.text));
+    .child(div().flex_none().text_size(10).text_color(g.pct === null ? t.dim : color).child(g.stale ? `${g.text}*` : g.text));
 }
 
 // Tag row: a small framed label, then "model · effort" when known.
@@ -68,25 +72,25 @@ function tag(label, model, t) {
   return h_flex()
     .w_full()
     .min_w(0)
-    .h(15)
-    .gap(6)
+    .h(13)
+    .gap(5)
     .items_center()
-    .child(div().flex_none().px(4).border(1).border_color(`${color}99`).bg(`${color}14`).font_family(HUD).text_size(8).text_color(color).child(label.text.toUpperCase()))
+    .child(div().flex_none().px(3).border(1).border_color(`${color}99`).bg(`${color}14`).font_family(HUD).text_size(7).text_color(color).child(label.text.toUpperCase()))
     .when(model !== null, (el) => el.child(modelLine(model, t)));
 }
 
 function modelLine(model, t) {
-  return div().flex_1().min_w(0).truncate().text_size(11).text_color(t.dim).child(model);
+  return div().flex_1().min_w(0).truncate().text_size(10.5).text_color(t.dim).child(model);
 }
 
 // HUD corner brackets: an L of two 2px bars on each corner.
 function brackets(color) {
   const bar = (w, h) => div().absolute().w(w).h(h).bg(color);
   return [
-    bar(9, 2).top(-1).left(-1), bar(2, 9).top(-1).left(-1),
-    bar(9, 2).top(-1).right(-1), bar(2, 9).top(-1).right(-1),
-    bar(9, 2).bottom(-1).left(-1), bar(2, 9).bottom(-1).left(-1),
-    bar(9, 2).bottom(-1).right(-1), bar(2, 9).bottom(-1).right(-1),
+    bar(6, 2).top(-1).left(-1), bar(2, 6).top(-1).left(-1),
+    bar(6, 2).top(-1).right(-1), bar(2, 6).top(-1).right(-1),
+    bar(6, 2).bottom(-1).left(-1), bar(2, 6).bottom(-1).left(-1),
+    bar(6, 2).bottom(-1).right(-1), bar(2, 6).bottom(-1).right(-1),
   ];
 }
 
@@ -104,6 +108,21 @@ export default class Collective extends View {
       if (agents().length === 0) return;
       if (window()?.active || this.clock % 3 === 0) cx.notify();
     });
+    // Answering from the sidebar: what each blocked agent asks, the reply being typed, the last result.
+    this.asks = {}; // address -> { lines, options }
+    this.reading = new Set();
+    this.acting = new Set();
+    this.results = {}; // address -> { ok, text, at }
+    this.replyTo = null;
+    this.reply = "";
+    this.replyFocus = cx.focus_handle();
+    cx.timer.every(1500, (cx) => this.readAsks(cx));
+    // The hover feed: which card the pointer rests on, since when, and its screen's last lines.
+    this.peekAddr = null;
+    this.peekSince = 0;
+    this.inPanel = false;
+    this.feeds = {}; // address -> string[]
+    cx.timer.every(1000, (cx) => { if (this.peekOpen()) this.readFeed(this.peekAddr, cx); });
     this.loadJobs(cx);
     this.load(cx);
     this.loadRemote(cx);
@@ -197,6 +216,165 @@ export default class Collective extends View {
     });
   }
 
+  // The feed opens once the pointer has rested on a card for PEEK_DELAY ms, never over the answer panel.
+  peekOpen() {
+    return Boolean(this.peekAddr) && !this.inPanel && Date.now() - this.peekSince >= PEEK_DELAY;
+  }
+
+  readFeed(addr, cx) {
+    const key = `feed:${addr}`;
+    if (this.reading.has(key)) return;
+    this.reading.add(key);
+    cx.spawn(async (cx) => {
+      try {
+        const r = await hc(["read", addr, "--json"]);
+        if (r.code === 0) this.feeds[addr] = tail(JSON.parse(r.stdout).text, FEED_LINES);
+      } catch {}
+      this.reading.delete(key);
+      cx.notify();
+    });
+  }
+
+  // The neural feed: a read-only look at the agent's screen, hung right of its card.
+  feed(a, details, statusColor, t) {
+    const lines = this.feeds[a.address];
+    return v_flex().id(`feed-${a.address}`).relative().ml(10).w(FEED_WIDTH).p(8).gap(6)
+      .bg("#020604f4").border(1).border_color(`${GREEN}aa`).shadow_lg()
+      .children(brackets(GREEN))
+      .child(h_flex().gap(8).items_center()
+        .child(div().flex_none().font_family(HUD).text_size(8).text_color(GREEN).child("NEURAL FEED"))
+        .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12).text_color("#b8ffbf").child(a.tab_name || a.address))
+        .child(div().flex_none().font_family(HUD).text_size(7).text_color(statusColor).child(STATUS[a.status] ?? ""))
+        .child(div().flex_none().text_size(10).text_color(t.dim).child(a.address)))
+      .child(div().w_full().text_size(10).text_color(t.dim).child(details))
+      .child(div().w_full().h(1).bg(DIM))
+      .child(v_flex().w_full().min_w(0).gap(0)
+        .children(lines
+          ? lines.map((l) => div().w_full().min_w(0).truncate().font_family("JetBrains Mono").text_size(10.5).line_height("15px").text_color("#9fe8a9").child(l))
+          : [div().font_family(HUD).text_size(7.5).text_color(t.dim).child("ESTABLISHING LINK…")]))
+      .child(div().w_full().h(1).bg(DIM))
+      .child(div().font_family(HUD).text_size(7).text_color(t.dim).child("CLICK THE CARD TO OPEN · READ-ONLY"));
+  }
+
+  // Read each blocked agent's screen; forget agents that aren't blocked any more.
+  readAsks(cx) {
+    const blocked = agents().filter((a) => a.status === "blocked").map((a) => a.address);
+    for (const addr of Object.keys(this.asks)) if (!blocked.includes(addr)) delete this.asks[addr];
+    if (this.replyTo && !blocked.includes(this.replyTo)) { this.replyTo = null; this.reply = ""; }
+    for (const addr of blocked) this.readAsk(addr, cx);
+  }
+
+  readAsk(addr, cx) {
+    if (this.reading.has(addr)) return;
+    this.reading.add(addr);
+    cx.spawn(async (cx) => {
+      try {
+        const r = await hc(["read", addr, "--json"]);
+        if (r.code === 0) this.asks[addr] = extract(JSON.parse(r.stdout).text);
+      } catch {}
+      this.reading.delete(addr);
+      cx.notify();
+    });
+  }
+
+  // Run hc steps in order against one agent, then say how it went under its card.
+  act(addr, steps, okText, cx) {
+    if (this.acting.has(addr)) return;
+    this.acting.add(addr);
+    cx.notify();
+    cx.spawn(async (cx) => {
+      let failed = null;
+      for (const args of steps) {
+        let r;
+        try { r = await hc(args); } catch (e) { r = { code: 1, stderr: String(e) }; }
+        if (r.code !== 0) { failed = (r.stderr || r.stdout || "no answer").trim().split("\n")[0].slice(0, 80); break; }
+      }
+      this.acting.delete(addr);
+      this.results[addr] = { ok: !failed, text: failed ? `FAILED: ${failed}` : okText, at: Date.now() };
+      this.readAsk(addr, cx);
+      cx.notify();
+    });
+  }
+
+  // A reply declines a choice list first (Esc), then types the text.
+  sendReply(addr, cx) {
+    const text = this.reply.trim();
+    if (!text) return;
+    const steps = [];
+    if (this.asks[addr]?.options.length) steps.push(["keys", addr, "esc"]);
+    steps.push(["send", "--force", addr, text]);
+    this.reply = "";
+    this.act(addr, steps, "REPLY SENT", cx);
+  }
+
+  replyKey(e, cx, addr) {
+    const m = e.modifiers;
+    if (e.key === "enter") this.sendReply(addr, cx);
+    else if (e.key === "escape") {
+      this.reply = "";
+      this.replyTo = null;
+      const p = focused()?.pane;
+      if (p) run("pane.focus", { pane: p });
+    } else if (e.key === "backspace") this.reply = m.alt || m.control ? this.reply.replace(/\S+\s*$/, "") : this.reply.slice(0, -1);
+    else if (m.control && e.key === "u") this.reply = "";
+    else if (e.key_char && !m.control && !m.platform) this.reply = (this.reply + e.key_char).slice(0, 2000);
+    else return;
+    cx.stop_propagation();
+    cx.notify();
+  }
+
+  // The panel under a blocked agent's card: its question, its choices, Interrupt and a reply line.
+  askPanel(a, t) {
+    const addr = a.address;
+    const ask = this.asks[addr];
+    const busy = this.acting.has(addr);
+    const result = this.results[addr] && Date.now() - this.results[addr].at < 5000 ? this.results[addr] : null;
+    const RED = t.blocked;
+    const stop = (el) => el.on_mouse_down("left", (_e, cx) => cx.stop_propagation());
+    const button = (id, label, fn, o = {}) => stop(h_flex().id(id).w_full().min_w(0).px(5).py(2).gap(5).items_center()
+      .border(1).border_color(o.lit ? RED : `${RED}66`).bg(o.lit ? `${RED}2a` : "#00000000")
+      .cursor_pointer().hover((s) => s.bg(`${RED}40`))
+      .when(busy, (el) => el.opacity(0.4))
+      .on_click((_e, cx) => { cx.stop_propagation(); if (!busy) fn(cx); })
+      .when(Boolean(o.key), (el) => el.child(div().flex_none().font_family(HUD).text_size(7.5).text_color(RED).child(o.key)))
+      .child(div().flex_1().min_w(0).truncate().text_size(10.5).text_color("#ffd9cf").child(label)));
+    const typing = this.replyTo === addr && this.replyFocus.is_focused();
+
+    return stop(v_flex().id(`ask-${addr}`).w_full().mt(4).p(5).gap(4).bg("#1a0604e8").border(1).border_color(`${RED}88`)
+      .on_hover((h, cx) => { this.inPanel = h; cx.notify(); })
+      .on_click((_e, cx) => cx.stop_propagation()))
+      .child(h_flex().gap(6).items_center()
+        .child(div().flex_none().font_family(HUD).text_size(7.5).text_color(RED).child("AWAITING INPUT"))
+        .child(div().flex_1().h(1).bg(`${RED}55`)))
+      // The question, as the agent's screen shows it.
+      .child(v_flex().w_full().min_w(0).gap(0)
+        .children(ask ? ask.lines.map((l) => div().w_full().min_w(0).truncate().font_family("JetBrains Mono").text_size(10).text_color("#e8c9c0").child(l))
+          : [div().font_family(HUD).text_size(7).text_color(t.dim).child("READING SCREEN…")]))
+      // Its choices, or a plain Approve (Enter).
+      .children(ask?.options.length
+        ? ask.options.map((o, i) => button(`ask-${addr}-opt-${i}`, o.label, (cx) => this.act(addr, [["keys", addr, ...o.keys]], `CHOSE ${i + 1}`, cx), { key: String(i + 1), lit: o.selected }))
+        : [button(`ask-${addr}-ok`, "Approve (press Enter)", (cx) => this.act(addr, [["keys", addr, "enter"]], "APPROVED", cx), { key: "⏎" })])
+      .child(button(`ask-${addr}-stop`, "Interrupt", (cx) => this.act(addr, [["interrupt", addr]], "INTERRUPTED", cx), { key: "■" }))
+      // The reply line: click, type, Enter.
+      .child(stop(h_flex().id(`ask-${addr}-reply`).track_focus(this.replyFocus).w_full().min_w(0).h(20).px(5).gap(4).items_center()
+        .bg("#000000aa").border(1).border_color(typing ? RED : `${RED}55`).cursor_text()
+        .on_click((_e, cx) => {
+          cx.stop_propagation();
+          if (this.replyTo !== addr) this.reply = "";
+          this.replyTo = addr;
+          this.replyFocus.focus();
+          cx.notify();
+        })
+        .on_key_down((e, cx) => { if (this.replyTo === addr) this.replyKey(e, cx, addr); })
+        .when(typing || (this.replyTo === addr && this.reply), (el) => el
+          .child(div().min_w(0).truncate().text_size(10.5).text_color("#ffd9cf").child(this.reply))
+          .when(typing, (el) => el.child(div().flex_none().w(5).h(10).bg(RED).loop("opacity", { from: 0, to: 1, period: 900 }))))
+        .when(!typing && !(this.replyTo === addr && this.reply), (el) => el.child(div().min_w(0).truncate().text_size(10).text_color(`${RED}aa`)
+          .child(ask?.options.length ? "Reply instead (declines)… Enter" : "Reply… Enter sends")))))
+      .when(Boolean(result) || busy, (el) => el.child(div().font_family(HUD).text_size(7).text_color(busy ? t.dim : result.ok ? GREEN : RED)
+        .child(busy ? "TRANSMITTING…" : result.text)));
+  }
+
   card(a, index, total, now, t) {
     const cache = this.cache[a.address] ?? this.remote[a.address] ?? null;
     const cortex = gauge(cache ? cache.hp : null, cache ? cache.updatedAt : null, now);
@@ -207,49 +385,69 @@ export default class Collective extends View {
     const nameColor = a.status === "blocked" ? "#ff7a62" : a.focused || a.status === "working" ? "#b8ffbf" : t.foreground;
     const label = appLabel(a.app);
     const model = modelText(cache?.model, cache?.effort);
-    return h_flex()
-      .id(`collective-${a.address}`)
-      .relative()
+    // What the compact card leaves out goes in the hover feed's header.
+    const details = [designation(index, total), job ? CLASS_TITLE[job] : null, cache?.name,
+      `Context left ${cortex.text}`, `5h quota left ${link.text}`].filter(Boolean).join(" · ");
+    const peeking = this.peekAddr === a.address && this.peekOpen();
+    const top = h_flex()
+      .id(`collective-top-${a.address}`)
       .w_full()
-      .flex_none()
-      .p(6)
-      .gap(9)
+      .gap(7)
       .items_center()
-      .bg(a.focused ? "#071409f0" : "#030805e8")
-      .border(1)
-      .border_color(a.focused || a.status === "blocked" ? `${edge}99` : "#0f2a16")
-      .cursor_pointer()
-      .hover((s) => s.bg("#0b2010f0"))
-      .on_click(() => {
-        playSound(BLIP);
-        run("agent.focus", { terminal: a.address });
-      })
-      .children(brackets(edge))
       .child(face(a, job, t, this.ms))
       .child(
         v_flex()
           .flex_1()
           .min_w(0)
-          .gap(3)
+          .gap(2)
+          // Line 1: name, then the status word.
           .child(
             h_flex()
               .w_full()
               .min_w(0)
               .gap(6)
               .items_center()
-              .child(div().flex_1().min_w(0).truncate().font_family(HUD).text_size(8).text_color(statusColor).child(designation(index, total))),
+              .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12.5).text_color(nameColor).child(a.tab_name || a.address))
+              .child(div().flex_none().font_family(HUD).text_size(7).text_color(statusColor)
+                .when(a.status === "blocked", (el) => el.loop("opacity", { from: 0.2, to: 1, period: 700 }))
+                .child(STATUS[a.status] ?? String(a.status ?? "").toUpperCase())),
           )
-          .child(div().w_full().min_w(0).truncate().font_weight(700).text_size(14).text_color(nameColor).child(a.tab_name || a.address))
-          .when(Boolean(job), (el) => el.child(div().font_family(HUD).text_size(8).text_color(`${GREEN}b0`).child((CLASS_TITLE[job] ?? "").toUpperCase())))
-          // Session name (set with /rename); takes no row when unset.
-          .when(Boolean(cache?.name), (el) =>
-            el.child(div().w_full().min_w(0).truncate().text_size(11).text_color(t.dim).child(cache.name)),
-          )
+          // Line 2: program tag and model.
           .when(Boolean(label), (el) => el.child(tag(label, label.builder ? null : model, t)))
           .when(Boolean(label?.builder) && model !== null, (el) => el.child(h_flex().w_full().min_w(0).child(modelLine(model, t))))
-          // Builders have no cortex/link source, so no empty cells.
-          .when(!label?.builder, (el) => el.child(v_flex().w_full().pt(1).gap(2).child(cell("CORTEX", cortex, t)).child(cell("LINK", link, t)))),
+          // Line 3: both gauges side by side. Builders have no cortex/link source, so no empty cells.
+          .when(!label?.builder, (el) => el.child(h_flex().w_full().min_w(0).gap(8).child(cell("CTX", cortex, t)).child(cell("LNK", link, t)))),
       );
+    return v_flex()
+      .id(`collective-${a.address}`)
+      .relative()
+      .w_full()
+      .flex_none()
+      .p(4)
+      .bg(a.focused ? "#071409f0" : "#030805e8")
+      .border(1)
+      .border_color(a.focused || a.status === "blocked" ? `${edge}99` : "#0f2a16")
+      .cursor_pointer()
+      .hover((s) => s.bg("#0b2010f0"))
+      .on_hover((h, cx) => {
+        if (h && this.peekAddr !== a.address) {
+          this.peekAddr = a.address;
+          this.peekSince = Date.now();
+          this.readFeed(a.address, cx);
+        } else if (!h && this.peekAddr === a.address) this.peekAddr = null;
+        cx.notify();
+      })
+      .on_click(() => {
+        this.peekAddr = null;
+        playSound(BLIP);
+        run("agent.focus", { terminal: a.address });
+      })
+      .children(brackets(edge))
+      // A 1px anchor at the card's top-right corner: the feed hangs from it, outside the sidebar.
+      .child(Popup.new(`peek-${a.address}`, div()).absolute().top(-1).right(-1).size(1)
+        .when(peeking, (pop) => pop.content(this.feed(a, details, statusColor, t))))
+      .child(top)
+      .when(a.status === "blocked", (el) => el.child(this.askPanel(a, t)));
   }
 
   render(cx) {
@@ -280,10 +478,10 @@ export default class Collective extends View {
         v_flex()
           .flex_1()
           .min_h(0)
-          .gap(9)
-          .px(9)
+          .gap(5)
+          .px(8)
           .pt(3)
-          .pb(9)
+          .pb(8)
           .overflow_y_scrollbar()
           .children(list.map((a, i) => this.card(a, i, list.length, now, t)))
           .when(list.length === 0, (el) =>

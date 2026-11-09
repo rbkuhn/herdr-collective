@@ -40,7 +40,8 @@ function keysOf(s, ps) {
   if (!dirs.size && s.folder) dirs.add(s.folder);
   return [...dirs].map((d) => JSON.stringify([s.machine ?? null, d]));
 }
-const rowHeight = ({ tree }) => (tree ? 28 : 76);
+// Compact rows: a small sector icon and the name on one line.
+const rowHeight = ({ tree }) => (tree ? 24 : 34);
 const where = (s, ps) => JSON.stringify([s.machine ?? null, place(s, ps)]);
 const base = (path) => path.replace(/\/+$/, "").split("/").pop();
 // Changes made outside Herdr (an editor's save, a commit in another app): looked
@@ -322,13 +323,19 @@ export default class Spaces extends View {
     };
   }
 
-  gitLines(sum, t) {
-    const line = (color, text) => div().truncate().text_size(11.5).text_color(color).child(text);
-    return [
-      sum.dirty > 0 && line(t.ansi3, `${sum.dirty} uncommitted file${sum.dirty === 1 ? "" : "s"}`),
-      sum.ahead > 0 && line(t.ansi2, `${sum.ahead} unpushed commit${sum.ahead === 1 ? "" : "s"}`),
-      sum.local > 0 && line(t.ansi1, `${sum.local} repo${sum.local === 1 ? "" : "s"} without a remote`),
+  // Compact git marks after the name: ~uncommitted, +unpushed, !no remote. Hover spells them out.
+  gitMarks(id, sum, t) {
+    const words = [
+      sum.dirty > 0 && `${sum.dirty} uncommitted file${sum.dirty === 1 ? "" : "s"}`,
+      sum.ahead > 0 && `${sum.ahead} unpushed commit${sum.ahead === 1 ? "" : "s"}`,
+      sum.local > 0 && `${sum.local} repo${sum.local === 1 ? "" : "s"} without a remote`,
     ].filter(Boolean);
+    if (!words.length) return null;
+    const mark = (color, text) => div().flex_none().text_size(11).text_color(color).child(text);
+    return h_flex().id(`space-git-${id}`).flex_none().gap(4).items_center().tooltip(words.join("\n"))
+      .when(sum.dirty > 0, (el) => el.child(mark(t.ansi3, `~${sum.dirty}`)))
+      .when(sum.ahead > 0, (el) => el.child(mark(t.ansi2, `+${sum.ahead}`)))
+      .when(sum.local > 0, (el) => el.child(mark(t.ansi1, `!${sum.local}`)));
   }
 
   row({ w, i, g, sum, tree }, t) {
@@ -372,15 +379,14 @@ export default class Spaces extends View {
       .on_mouse_down("right", () => this.menu(w))
       .child(
         h_flex()
-          .gap(9)
+          .gap(7)
           .items_center()
-          .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
-          .when(!tree, el => el.child(image(placeFor(w.name, this.places)).size(72).flex_none()))
-          .child(v_flex().flex_1().min_w(0).gap(1)
-            .child(h_flex().gap(9).items_center()
-              .child(v_flex().flex_shrink(0).max_w(150).child(div().font_family("Silkscreen").text_size(7.5).text_color(on ? "#39d353" : t.dim).child(`SECTOR ${String(i + 1).padStart(3, "0")}`)).child(div().truncate().font_weight(on ? 700 : 500).text_size(13).text_color(on ? "#b8ffbf" : t.foreground).child(w.name)))
-              .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()))
-            .when(!tree, el => el.children(this.gitLines(sum, t)))),
+          .when(Boolean(tree), el => el.pl(16).child(svg("mods/workspace-chrome/branch.svg").size(12).text_color(t.dim)))
+          .when(!tree, el => el.child(image(placeFor(w.name, this.places)).size(26).flex_none()))
+          .when(!tree, el => el.child(div().flex_none().font_family("Silkscreen").text_size(7.5).text_color(on ? "#39d353" : t.dim).child(String(i + 1).padStart(3, "0"))))
+          .child(div().flex_shrink(1).min_w(0).max_w(150).truncate().font_weight(on ? 700 : 500).text_size(13).text_color(on ? "#b8ffbf" : t.foreground).child(w.name))
+          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .when(!tree, el => { const m = this.gitMarks(w.id, sum, t); return m ? el.child(m) : el; }),
       );
   }
 
@@ -418,7 +424,7 @@ export default class Spaces extends View {
         .when(!collapsed, el => el.child(h_flex().flex_1().gap(8).items_center().child(div().font_family("Silkscreen").font_weight(700).text_size(10).text_color("#39d353").child("SECTORS")).child(div().flex_1().mr(8).h(1).bg("#1f5c2c"))))
         .child(div().id("space-new").size(26).flex_none().flex().items_center().justify_center().rounded(6).hover(s => s.bg(t.hover).text_color(t.foreground))
           .on_click(() => run("space.new")).child(svg("mods/workspace-chrome/plus.svg").size(14))))
-      .child(v_flex().flex_1().min_h(0).px(8).pb(14).gap(4).overflow_y_scrollbar().mode("always")
+      .child(v_flex().flex_1().min_h(0).px(8).pb(8).gap(2).overflow_y_scrollbar().mode("always")
         .on_mouse_up("left", (_e, cx) => { this.pressed = null; cx.notify(); })
         .children(this.grouped(t, collapsed)));
   }
