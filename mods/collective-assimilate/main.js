@@ -46,8 +46,18 @@ export default class Assimilate extends View {
       try { list = (await knownAgents({ on })).filter((a) => a.installed && a.run); } catch {}
       this.units = list;
       if (!list.some((u) => u.key === this.unit)) this.unit = (list.find((u) => /claude/i.test(u.key)) ?? list[0])?.key ?? null;
+      this.syncUnit();
       cx.notify();
     });
+  }
+
+  // A role named after an agent ("Codex", "Claude Code") also picks that agent as the unit,
+  // so the tab's name and the program it runs agree.
+  syncUnit() {
+    const want = String(this.role ?? "").toLowerCase();
+    const first = want.split(/\s+/)[0];
+    const u = (this.units ?? []).find((x) => [want, first].includes(x.key.toLowerCase()) || String(x.name ?? "").toLowerCase() === want);
+    if (u) this.unit = u.key;
   }
 
   close() {
@@ -84,6 +94,7 @@ export default class Assimilate extends View {
     if (!this.roles.length) return;
     const i = this.roles.findIndex((r) => r.name === this.role);
     this.role = this.roles[(i + step + this.roles.length) % this.roles.length].name;
+    this.syncUnit();
   }
 
   label(text) {
@@ -121,7 +132,7 @@ export default class Assimilate extends View {
       // Role: its face and name; the tab is named after it.
       .child(v_flex().gap(5).child(this.label("ROLE  ·  TAB SWITCHES"))
         .child(div().flex().flex_wrap().gap(5).children(this.roles.map((r) =>
-          this.chip(`role-${r.job}-${r.name}`, r.name === this.role, () => { this.role = r.name; },
+          this.chip(`role-${r.job}-${r.name}`, r.name === this.role, () => { this.role = r.name; this.syncUnit(); },
             image(`${FACES}/${r.job}.png`).size(22).flex_none().border(1).border_color(DIM),
             div().text_size(11.5).child(r.name))))))
       // Sector: which space it joins (and so which machine).
