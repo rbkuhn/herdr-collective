@@ -18,6 +18,7 @@ import { CLASS_TITLE, animPath, appLabel, assignJobs, cachePath, cells, designat
 
 const HOME = appHome();
 const SESSIONS_DIR = `${HOME}/data/traveler/sessions`;
+const CODEX_FOOTER = /^\s*([A-Za-z][\w.-]*)\s+(minimal|low|medium|high|xhigh|max)\s+·/;
 const JOBS_FILE = `${HOME}/mods/collective-agents/jobs.json`;
 const BLIP = "mods/collective-chrome/sounds/blip.mp3";
 // Compact cards: a small face and three short lines.
@@ -148,6 +149,10 @@ export class Roster {
     this.warned = new Set();
     this.fleet = null;
     cx.timer.every(1000, (cx) => { if (this.peekOpen()) this.readFeed(this.peekAddr, cx); });
+    // Codex writes no statusLine cache: its model comes from its own footer ("GPT-6.1-Sol medium · ~").
+    this.codex = {}; // address -> "model · effort"
+    cx.timer.every(15000, (cx) => this.readCodexModels(cx));
+    this.readCodexModels(cx);
     this.loadJobs(cx);
     this.load(cx);
     this.loadRemote(cx);
@@ -239,6 +244,36 @@ export class Roster {
       this.remote = next;
       cx.notify();
     });
+  }
+
+  // The statusLine cache is written only by Claude Code. A terminal that ran Claude and now
+  // runs another program keeps the old file, so other programs never read it.
+  cacheFor(a) {
+    if (a.app !== "claude-code") return null;
+    return this.cache[a.address] ?? this.remote[a.address] ?? null;
+  }
+
+  readCodexModels(cx) {
+    for (const a of agents()) {
+      if (a.app !== "codex") continue;
+      const key = `model:${a.address}`;
+      if (this.reading.has(key)) continue;
+      this.reading.add(key);
+      cx.spawn(async (cx) => {
+        try {
+          const r = await hc(["read", a.address, "--json"]);
+          if (r.code === 0) {
+            const lines = String(JSON.parse(r.stdout).text ?? "").split("\n").slice(-12).reverse();
+            for (const line of lines) {
+              const m = CODEX_FOOTER.exec(line);
+              if (m) { this.codex[a.address] = `${m[1]} · ${m[2]}`; break; }
+            }
+          }
+        } catch {}
+        this.reading.delete(key);
+        cx.notify();
+      });
+    }
   }
 
   // The feed opens once the pointer has rested on a card for PEEK_DELAY ms, never over the answer panel.
@@ -401,7 +436,7 @@ export class Roster {
   }
 
   card(a, index, total, now, t) {
-    const cache = this.cache[a.address] ?? this.remote[a.address] ?? null;
+    const cache = this.cacheFor(a);
     const cortex = gauge(cache ? cache.hp : null, cache ? cache.updatedAt : null, now);
     const link = gauge(cache ? cache.sp : null, cache ? cache.updatedAt : null, now);
     const job = jobIn(a.tab_name, this.assigned);
@@ -409,7 +444,7 @@ export class Roster {
     const statusColor = a.status === "blocked" ? t.blocked : a.status === "working" ? "#8cff9e" : t[a.status] ?? t.dim;
     const nameColor = a.status === "blocked" ? "#ff7a62" : a.focused || a.status === "working" ? "#b8ffbf" : t.foreground;
     const label = appLabel(a.app);
-    const model = modelText(cache?.model, cache?.effort);
+    const model = a.app === "codex" ? this.codex[a.address] ?? null : modelText(cache?.model, cache?.effort);
     // What the compact card leaves out goes in the hover feed's header.
     const ctxEta = a.status === "working" ? etaText(this.tele.eta(a.address, "hp")) : null;
     const lnkEta = etaText(this.tele.eta(a.address, "sp"));
@@ -485,7 +520,7 @@ export class Roster {
   watchFuel(list) {
     const fleet = { sp: null, spEta: null, low: [] };
     for (const a of list) {
-      const c = this.cache[a.address] ?? this.remote[a.address] ?? null;
+      const c = this.cacheFor(a);
       this.tele.add(a.address, c);
       if (!c || this.now - c.updatedAt > 300) continue;
       if (c.sp != null && (fleet.sp === null || c.sp < fleet.sp)) fleet.sp = c.sp;
@@ -562,6 +597,7 @@ export class Roster {
     const fresh = list.filter((a) => !this.seen.has(a.address));
     if (fresh.some((a) => cachePath(HOME, a.address) !== null)) this.load(cx);
     if (fresh.some((a) => remoteCachePath(a.address) !== null)) this.loadRemote(cx);
+    if (fresh.some((a) => a.app === "codex")) this.readCodexModels(cx);
     this.ms = Date.now();
     this.now = Math.floor(this.ms / 1000);
     this.watchFuel(list);

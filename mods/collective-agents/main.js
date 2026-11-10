@@ -376,7 +376,8 @@ export default class Collective extends View {
   }
 
   card(a, index, total, now, t) {
-    const cache = this.cache[a.address] ?? this.remote[a.address] ?? null;
+    // Only Claude Code writes the statusLine cache; another program in the same terminal must not read a file Claude left behind.
+    const cache = a.app === "claude-code" ? this.cache[a.address] ?? this.remote[a.address] ?? null : null;
     const cortex = gauge(cache ? cache.hp : null, cache ? cache.updatedAt : null, now);
     const link = gauge(cache ? cache.sp : null, cache ? cache.updatedAt : null, now);
     const job = jobIn(a.tab_name, this.assigned);
