@@ -43,9 +43,15 @@ function face(a, job, t, now) {
   const frame = a.status === "blocked" ? t.blocked : DIM;
   const shell = div().relative().size(FACE).flex_none().overflow_hidden().bg("#000000").border(1).border_color(frame);
   if (anim) {
-    const i = Math.floor(now / anim.ms) % anim.frames;
+    // Each drone starts its loop at its own point, so two of a kind don't move in step.
+    const offset = [...String(a.address)].reduce((n, c) => (n * 31 + c.codePointAt(0)) % 9973, 7);
+    const i = (Math.floor(now / anim.ms) + offset) % anim.frames;
     // The status word moved beside the name; the face is too small for a HUD strip.
-    return shell.child(image(anim.path).absolute().top(0).left(-i * FACE).w(FACE * anim.frames).h(FACE));
+    // One file per frame: a strip stepped by an offset lands between frames at
+    // fractional display scales and the face drifts. The still sits under it while a frame loads.
+    return shell
+      .child(image(`mods/collective-agents/faces/${job}.png`).absolute().top(-1).left(-1).size(FACE))
+      .child(image(`${anim.dir}/${String(i).padStart(2, "0")}.png`).absolute().top(-1).left(-1).size(FACE));
   }
   const p = a.program;
   if (!p?.icon) return shell;
@@ -70,6 +76,14 @@ function cell(word, g, t) {
     .child(div().flex_none().font_family(HUD).text_size(7).text_color(t.dim).child(word))
     .child(h_flex().gap(1).flex_none().children(lamps))
     .child(div().flex_none().text_size(10).text_color(g.pct === null ? t.dim : color).child(g.stale ? `${g.text}*` : g.text));
+}
+
+// A card's title: its tab's name. Drones sharing a tab (split panes) get their
+// node id first, as the pane header shows it, so truncation keeps them apart.
+function droneName(a) {
+  const name = a.tab_name || a.address;
+  if (!a.tab_name || agents().filter((b) => b.tab === a.tab).length < 2) return name;
+  return `${String(a.address).replace(/^.*\//, "").toUpperCase()} \u00b7 ${name}`;
 }
 
 // Tag row: a small framed label, then "model · effort" when known.
@@ -254,7 +268,7 @@ export class Roster {
       .children(brackets(GREEN))
       .child(h_flex().gap(8).items_center()
         .child(div().flex_none().font_family(HUD).text_size(8).text_color(GREEN).child("NEURAL FEED"))
-        .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12).text_color("#b8ffbf").child(a.tab_name || a.address))
+        .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12).text_color("#b8ffbf").child(droneName(a)))
         .child(div().flex_none().font_family(HUD).text_size(7).text_color(statusColor).child(STATUS[a.status] ?? ""))
         .child(div().flex_none().text_size(10).text_color(t.dim).child(a.address)))
       .child(div().w_full().text_size(10).text_color(t.dim).child(details))
@@ -422,7 +436,7 @@ export class Roster {
               .min_w(0)
               .gap(6)
               .items_center()
-              .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12.5).text_color(nameColor).child(a.tab_name || a.address))
+              .child(div().flex_1().min_w(0).truncate().font_weight(700).text_size(12.5).text_color(nameColor).child(droneName(a)))
               .child(div().flex_none().font_family(HUD).text_size(7).text_color(statusColor)
                 .when(a.status === "blocked", (el) => el.loop("opacity", { from: 0.2, to: 1, period: 700 }))
                 .child(STATUS[a.status] ?? String(a.status ?? "").toUpperCase())),

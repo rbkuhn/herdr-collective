@@ -14,7 +14,7 @@ cd herdr-collective
 H=~/.config/herdr-app
 cp layouts/collective.json layouts/collective.png "$H/layouts/"
 cp themes/collective.json "$H/themes/"
-cp -r mods/collective-agents mods/collective-assimilate mods/collective-chrome mods/collective-pane mods/collective-spaces mods/collective-tabs mods/collective-tree "$H/mods/"
+cp -r mods/collective-agents mods/collective-assimilate mods/collective-chrome mods/collective-pane mods/collective-spaces mods/collective-tabs mods/collective-tree mods/layout-sounds "$H/mods/"
 herdr-app do layout.switch '{"name":"collective"}'
 ```
 
@@ -51,15 +51,7 @@ The script needs `node`. It records the numbers without printing anything, so yo
 
 ### Optional: sounds
 
-A hive chorus of six voices runs through a metallic radio filter. "Task complete." plays over a cold chime. For "an agent needs you", a short, quiet klaxon plays first, then the chorus says "Your input is required." on its own, so the words come through clearly. To use them, add this to `~/.config/herdr-app/settings.json`. This setting applies to every layout:
-
-```json
-"sounds": {
-  "enabled": true,
-  "done": "mods/collective-chrome/sounds/done.mp3",
-  "blocked": "mods/collective-chrome/sounds/blocked_voiced.mp3"
-}
-```
+A hive chorus of six voices runs through a metallic radio filter. "Task complete." plays over a cold chime. For "an agent needs you", a short, quiet klaxon plays first, then the chorus says "Your input is required." on its own, so the words come through clearly. The layout carries a small invisible mod, `layout-sounds`, that sets these two sounds in `~/.config/herdr-app/settings.json` whenever Collective comes on screen, so there is nothing to set up. Herdr's sounds setting is global: the sounds stay until you change them or switch to another layout that sets its own. `mods/layout-sounds/sounds.json` lists the pair for each layout; edit it to pick other files.
 
 `blocked.mp3` is the older take, with the voices mixed under the klaxon. `done_fx_only.mp3` and `blocked_fx_only.mp3` are the effects without the voices. Clicking a drone card always plays `blip.mp3`.
 

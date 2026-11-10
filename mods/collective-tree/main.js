@@ -106,6 +106,10 @@ export default class Spaces extends View {
     const now = Date.now();
     const sp = spaces();
     for (const s of sp) if (!this.shown.has(s.id)) this.born[s.id] ??= now;
+    // The full look (every pane, each place's git) once a second; every tick
+    // only while a new space waits to be shown.
+    this.tick = ((this.tick ?? 0) + 1) % 4;
+    if (this.tick && sp.every((s) => this.shown.has(s.id))) return;
     const due = this.due(now, sp, panes());
     if (due.size) this.refreshGit(due, cx);
     if (sp.some((s) => !this.shown.has(s.id))) cx.notify();
@@ -395,7 +399,7 @@ export default class Spaces extends View {
           .when(Boolean(tree), el => el.pl(16).child(svg("mods/workspace-chrome/branch.svg").size(12).text_color(t.dim)))
           .when(!tree, el => el.child(image(placeFor(w.name, this.places)).size(26).flex_none()))
           .when(!tree, el => el.child(div().flex_none().font_family("Silkscreen").text_size(7.5).text_color(on ? "#39d353" : t.dim).child(String(i + 1).padStart(3, "0"))))
-          .child(div().flex_shrink(1).min_w(0).max_w(150).truncate().font_weight(on ? 700 : 500).text_size(13).text_color(on ? "#b8ffbf" : t.foreground).child(w.name))
+          .child(div().flex_shrink(1).min_w(0).truncate().font_weight(on ? 700 : 500).text_size(13).text_color(on ? "#b8ffbf" : t.foreground).child(w.name === "~" ? "HOME" : w.name))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
           .when(!tree, el => { const m = this.gitMarks(w.id, sum, t); return m ? el.child(m) : el; })
           .when(!tree, el => el.child(this.assimilateButton(w, t)))

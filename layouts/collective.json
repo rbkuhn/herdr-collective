@@ -185,7 +185,17 @@
     16
   ],
   "theme": "collective",
-  "terminal_opacity": 0.5,
+  "terminal_opacity": 0.75,
   "ui_font": "Pixelify Sans",
-  "preview": "layouts/collective.png"
+  "preview": "layouts/collective.png",
+  "floating": [
+    {
+      "id": "layout-sounds",
+      "content": {
+        "mod": "layout-sounds"
+      },
+      "edge": "bottom",
+      "align": "end"
+    }
+  ]
 }

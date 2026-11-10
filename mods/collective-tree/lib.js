@@ -124,17 +124,18 @@ export function portraitPath(job) {
   return typeof job === "string" && JOB_SET.has(job) ? `${PORTRAITS_DIR}/${job}.png` : null;
 }
 
-// Animated portrait for a role in a state: a horizontal strip of frames
-// (anim/<role>-<state>.webp, frame i at x = i * frame width), stepped by the card's clock.
+// Animated portrait for a role in a state: one PNG per frame
+// (frames/<role>/<state>/NN.png, drawn by scripts/collective-faces.py, whose FRAMES
+// must match these counts), stepped by the card's clock.
 export const ANIM = {
-  rest: { frames: 32, ms: 110 },
-  done: { frames: 16, ms: 110 },
-  working: { frames: 24, ms: 75 },
-  blocked: { frames: 12, ms: 90 },
+  rest: { frames: 48, ms: 110 },
+  done: { frames: 24, ms: 100 },
+  working: { frames: 32, ms: 80 },
+  blocked: { frames: 16, ms: 90 },
 };
 export function animPath(job, state) {
   if (typeof job !== "string" || !JOB_SET.has(job) || !(state in ANIM)) return null;
-  return { path: `mods/collective-agents/anim/${job}-${state}.webp`, ...ANIM[state] };
+  return { dir: `mods/collective-agents/frames/${job}/${state}`, ...ANIM[state] };
 }
 
 // An LED power cell: how many of `segments` are lit for a 0–100 value (null: none, unknown).

@@ -1,0 +1,30 @@
+{
+  "inferno": {
+    "done": "mods/inferno-chrome/sounds/done_a.mp3",
+    "blocked": "mods/inferno-chrome/sounds/blocked_a.mp3"
+  },
+  "collective": {
+    "done": "mods/collective-chrome/sounds/done.mp3",
+    "blocked": "mods/collective-chrome/sounds/blocked_voiced.mp3"
+  },
+  "unimatrix": {
+    "done": "mods/unimatrix-rail/sounds/done_voice.mp3",
+    "blocked": "mods/unimatrix-rail/sounds/blocked_voice.mp3"
+  },
+  "aurora": {
+    "done": "mods/aurora-chrome/sounds/done_a.mp3",
+    "blocked": "mods/aurora-chrome/sounds/blocked_a.mp3"
+  },
+  "koi": {
+    "done": "mods/koi-chrome/sounds/done.mp3",
+    "blocked": "mods/koi-chrome/sounds/blocked.mp3"
+  },
+  "signalbox": {
+    "done": "mods/signalbox-chrome/sounds/done.mp3",
+    "blocked": "mods/signalbox-chrome/sounds/blocked.mp3"
+  },
+  "alembic": {
+    "done": "mods/alembic-chrome/sounds/done.mp3",
+    "blocked": "mods/alembic-chrome/sounds/blocked.mp3"
+  }
+}

@@ -16,7 +16,7 @@ function icon(p, size, color) {
 function folder(cwd) {
   if (!cwd) return "";
   const h = home();
-  return cwd === h ? "~" : cwd.startsWith(h + "/") ? "~" + cwd.slice(h.length) : cwd;
+  return cwd === h ? "HOME" : cwd.startsWith(h + "/") ? "~" + cwd.slice(h.length) : cwd;
 }
 
 export default class Pane extends View {
