@@ -27,13 +27,10 @@ function toggleSidebar() {
 const CUBE = 30, CUBE_FRAMES = 36, CUBE_MS = 90;
 
 export default class WorkspaceChrome extends View {
-  init(_props, cx) {
-    if (props()?.footer) return;
-    this.tick = 0;
-    cx.timer.every(CUBE_MS, (cx) => { if (window()?.active || ++this.tick % 4 === 0) cx.notify(); });
-  }
+  // The cube holds its first frame: a redraw timer here repainted the whole window ~11x/sec.
+  init(_props, _cx) {}
   cube() {
-    const i = Math.floor(Date.now() / CUBE_MS) % CUBE_FRAMES;
+    const i = 0;
     return div().relative().size(CUBE).flex_none().overflow_hidden()
       .child(image("mods/collective-chrome/art/cube.webp").absolute().top(0).left(-i * CUBE).w(CUBE * CUBE_FRAMES).h(CUBE));
   }

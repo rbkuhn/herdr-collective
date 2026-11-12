@@ -46,7 +46,7 @@ function face(a, job, t, now) {
   if (anim) {
     // Each drone starts its loop at its own point, so two of a kind don't move in step.
     const offset = [...String(a.address)].reduce((n, c) => (n * 31 + c.codePointAt(0)) % 9973, 7);
-    const i = (Math.floor(now / anim.ms) + offset) % anim.frames;
+    const i = (now + offset) % anim.frames;
     // The status word moved beside the name; the face is too small for a HUD strip.
     // One file per frame: a strip stepped by an offset lands between frames at
     // fractional display scales and the face drifts. The still sits under it while a frame loads.
@@ -125,10 +125,12 @@ export class Roster {
     this.seen = new Set();
     this.watching = false;
     this.clock = 0;
-    cx.timer.every(80, (cx) => {
+    // Faces step one frame per tick, and only while a drone is working or blocked:
+    // every notify redraws the whole window, so idle faces hold still.
+    cx.timer.every(250, (cx) => {
+      if (!agents().some((a) => a.status === "working" || a.status === "blocked")) return;
       this.clock++;
-      if (agents().length === 0) return;
-      if (window()?.active || this.clock % 3 === 0) cx.notify();
+      if (window()?.active || this.clock % 4 === 0) cx.notify();
     });
     // Answering from the sidebar: what each blocked agent asks, the reply being typed, the last result.
     this.asks = {}; // address -> { lines, options }
@@ -458,7 +460,7 @@ export class Roster {
       .w_full()
       .gap(7)
       .items_center()
-      .child(face(a, job, t, this.ms))
+      .child(face(a, job, t, this.clock))
       .child(
         v_flex()
           .flex_1()
@@ -503,7 +505,6 @@ export class Roster {
       })
       .on_click(() => {
         this.peekAddr = null;
-        playSound(BLIP);
         run("agent.focus", { terminal: a.address });
       })
       .children(brackets(edge))
