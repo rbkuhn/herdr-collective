@@ -501,7 +501,7 @@ export default class Spaces extends View {
     return v_flex().size_full().min_h(0).text_size(13)
       .child(h_flex().h(31).pl(16).pr(10).items_center().justify_between().text_size(11.5).text_color(t.dim)
         .when(!collapsed, el => el.child(h_flex().flex_1().gap(8).items_center().child(div().font_family(HUD).font_weight(700).text_size(10).text_color(GREEN).child("THE COLLECTIVE"))
-          .child(div().w(6).h(10).bg(GREEN).loop("opacity", { from: 0, to: 1, period: 1000 }))
+          .child(div().w(6).h(10).bg(GREEN))
           .child(div().flex_1().h(1).bg("#1f5c2c"))
           .child(div().mr(4).font_family(HUD).text_size(9).text_color(t.dim).child(`${all.length} DRONES`))))
         .child(div().id("space-new").size(26).flex_none().flex().items_center().justify_center().rounded(6).hover(s => s.bg(t.hover).text_color(t.foreground))
