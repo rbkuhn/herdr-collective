@@ -1,6 +1,6 @@
 # Collective
 
-A cybernetic hive-mind layout for the [Herdr](https://herdr.dev) desktop app, drawn in pixel art. Your coding agents become drones in a collective. Each drone has an animated 48×48 pixel-art face, a designation like "THREE OF FOUR", and two LED power cells: CORTEX (context left) and LINK (5-hour quota left). While an agent works, its drone sweeps an ocular laser across the screen. When an agent needs you, the face glitches red. Spaces are numbered sectors with pixel-art locations, a rotating pixel cube sits in the corner, and the whole window glows hive green over a dark circuit hull.
+A cybernetic hive-mind layout for the [Herdr](https://herdr.dev) desktop app, drawn in pixel art. Your coding agents become drones in a collective. Each drone has an animated 48×48 pixel-art face, a designation like "THREE OF FOUR", and two LED power cells: CORTEX (context left) and LINK (5-hour quota left). While an agent works, its drone sweeps an ocular laser across the screen. When an agent needs you, the face glitches red. Spaces are numbered sectors with pixel-art locations, a pixel cube sits in the corner, and the whole window glows hive green over a dark circuit hull.
 
 ![Collective](preview.png)
 
@@ -30,6 +30,8 @@ Press `ctrl-shift-l` to switch back. To remove Collective, delete the files you 
 - **Fuel warnings**: the line under the header shows the 5-hour quota left (LINK) and when it runs dry at the current pace. At 15% context a card turns red and offers COMPACT (sends `/compact`), and a toast warns you once.
 - **Assimilate** (`ctrl-shift-a`, or a sector's `+`): pick a role, a sector, an installed agent and a first message, and Enter starts it in a new tab named after the role, so it gets that drone's face.
 
+The faces only animate while at least one agent is working or blocked, and step 4 frames a second. With every drone idle, the sidebar doesn't redraw, so Herdr stays near idle.
+
 The sidebar runs `hc` against your own agents: `hc read` to show a blocked or hovered drone's screen, and `hc keys`, `hc send` and `hc interrupt` only when you press a button. Nothing reaches the network.
 
 ### Optional: fill the Cortex and Link cells (Claude Code)
@@ -53,7 +55,7 @@ The script needs `node`. It records the numbers without printing anything, so yo
 
 A hive chorus of six voices runs through a metallic radio filter. "Task complete." plays over a cold chime. For "an agent needs you", a short, quiet klaxon plays first, then the chorus says "Your input is required." on its own, so the words come through clearly. The layout carries a small invisible mod, `layout-sounds`, that sets these two sounds in `~/.config/herdr-app/settings.json` whenever Collective comes on screen, so there is nothing to set up. Herdr's sounds setting is global: the sounds stay until you change them or switch to another layout that sets its own. `mods/layout-sounds/sounds.json` lists the pair for each layout; edit it to pick other files.
 
-`blocked.mp3` is the older take, with the voices mixed under the klaxon. `done_fx_only.mp3` and `blocked_fx_only.mp3` are the effects without the voices. Clicking a drone card always plays `blip.mp3`.
+`blocked.mp3` is the older take, with the voices mixed under the klaxon. `done_fx_only.mp3` and `blocked_fx_only.mp3` are the effects without the voices. Assimilate plays `blip.mp3` when it starts a drone; clicking a drone card is silent.
 
 ## Customise
 
