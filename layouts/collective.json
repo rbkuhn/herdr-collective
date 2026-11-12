@@ -129,13 +129,6 @@
                       "content": {
                         "mod": "changes"
                       }
-                    },
-                    {
-                      "id": "inbox",
-                      "type": "block",
-                      "content": {
-                        "mod": "inbox"
-                      }
                     }
                   ],
                   "active": "files"
